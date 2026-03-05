@@ -1,7 +1,6 @@
 
 import Fastify from "fastify"
 import { Server } from "socket.io"
-import http from "http"
 import dotenv from "dotenv"
 import { createClient } from "@supabase/supabase-js"
 import fastifyStatic from "@fastify/static"
@@ -12,8 +11,10 @@ import { v4 as uuidv4 } from "uuid"
 dotenv.config()
 
 const fastify = Fastify({ logger:true })
-const server = http.createServer(fastify.server)
-const io = new Server(server,{cors:{origin:"*"}})
+
+const io = new Server(fastify.server,{
+  cors:{ origin:"*" }
+})
 
 const supabase = createClient(process.env.SUPABASE_URL,process.env.SUPABASE_KEY)
 
@@ -25,15 +26,12 @@ const COLS=5
 const SIZE=ROWS*COLS
 const MAX_CARDS=5000
 
-const LIMITS={one:20,two:10,three:5,full:1}
-
 let events=[]
 let cards=[]
 let eventIndex={}
-let players={}  
+let players={}
 let triggered=[]
 let winners={one:[],two:[],three:[],full:[]}
-let participants={one:[],two:[],three:[],full:[]}
 
 function shuffle(a){return [...a].sort(()=>Math.random()-0.5)}
 
@@ -64,17 +62,10 @@ function checkCard(index){
  const card=cards[index]
  const lines=countLines(card)
 
- if(lines>=1 && winners.one.length<LIMITS.one && !winners.one.includes(token))
-   winners.one.push(token)
-
- if(lines>=2 && winners.two.length<LIMITS.two && !winners.two.includes(token))
-   winners.two.push(token)
-
- if(lines>=3 && winners.three.length<LIMITS.three && !winners.three.includes(token))
-   winners.three.push(token)
-
- if(lines>=4 && winners.full.length<LIMITS.full && !winners.full.includes(token))
-   winners.full.push(token)
+ if(lines>=1 && !winners.one.includes(token)) winners.one.push(token)
+ if(lines>=2 && !winners.two.includes(token)) winners.two.push(token)
+ if(lines>=3 && !winners.three.includes(token)) winners.three.push(token)
+ if(lines>=4 && !winners.full.includes(token)) winners.full.push(token)
 }
 
 io.on("connection",(socket)=>{
@@ -110,43 +101,8 @@ fastify.post("/api/trigger", async(req)=>{
  return {ok:true}
 })
 
-fastify.post("/api/participate", async(req)=>{
- const {token,stage,name,email}=req.body
-
- if(!winners[stage].includes(token)){
-   return {error:"not eligible"}
- }
-
- const {data}=await supabase
-  .from("contributors")
-  .select("email")
-  .eq("email",email)
-  .single()
-
- if(!data){
-   return {error:"email not contributor"}
- }
-
- if(!participants[stage].includes(token)){
-   participants[stage].push(token)
- }
-
- await supabase.from("participations").insert({
-   token,
-   name,
-   email,
-   stage
- })
-
- return {ok:true}
-})
-
-fastify.get("/api/stats",()=>{
- return{
-  players:Object.keys(players).length,
-  winners,
-  participants
- }
+fastify.get("/api/health", async()=>{
+ return {status:"ok",players:Object.keys(players).length}
 })
 
 fastify.register(fastifyStatic,{
@@ -158,4 +114,15 @@ fastify.get("*",(req,reply)=>{
  reply.sendFile("index.html")
 })
 
-server.listen({port:process.env.PORT||3000,host:"0.0.0.0"})
+const start = async () => {
+  try {
+    const port = process.env.PORT || 3000
+    await fastify.listen({port,host:"0.0.0.0"})
+    console.log("Server listening on",port)
+  } catch(err){
+    fastify.log.error(err)
+    process.exit(1)
+  }
+}
+
+start()
