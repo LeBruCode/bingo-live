@@ -3,18 +3,18 @@ import {useEffect,useState} from "react"
 import {io} from "socket.io-client"
 
 let token = localStorage.getItem("bingoToken")
-const socket = io({auth:{token}})
+const socket = io(window.location.origin,{auth:{token}})
 
 export default function Player(){
 
-const [card,setCard] = useState(null)
-const [state,setState] = useState(null)
+const [card,setCard]=useState(null)
+const [state,setState]=useState(null)
 
 useEffect(()=>{
 
 socket.on("token",(t)=>{
  localStorage.setItem("bingoToken",t)
- token = t
+ token=t
 })
 
 socket.on("card",setCard)
@@ -22,7 +22,7 @@ socket.on("state",setState)
 
 },[])
 
-if(!card) return <div className="container">Loading…</div>
+if(!card) return <div className="container">Chargement de la carte…</div>
 
 return(
 <div className="container">
