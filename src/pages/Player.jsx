@@ -2,19 +2,19 @@
 import {useEffect,useState} from "react"
 import {io} from "socket.io-client"
 
-let token=localStorage.getItem("bingoToken")
-const socket=io({auth:{token}})
+let token = localStorage.getItem("bingoToken")
+const socket = io({auth:{token}})
 
 export default function Player(){
 
-const [card,setCard]=useState(null)
-const [state,setState]=useState(null)
+const [card,setCard] = useState(null)
+const [state,setState] = useState(null)
 
 useEffect(()=>{
 
 socket.on("token",(t)=>{
  localStorage.setItem("bingoToken",t)
- token=t
+ token = t
 })
 
 socket.on("card",setCard)
@@ -33,7 +33,7 @@ return(
 
 {card.map((c,i)=>{
 
- const active=state?.triggered.includes(c)
+ const active = state?.triggered.includes(c)
 
  return(
  <div key={i} className={"cell "+(active?"active":"")}>
